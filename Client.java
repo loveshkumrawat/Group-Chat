@@ -48,8 +48,12 @@ class Client {
 					public void run() {
 						
 						try {
-							if ((recvText = recv.readLine()).equals(endRule)) exit = true;
-							System.out.println(senderName + ": " + recvText);
+							if ((recvText = recv.readLine()).equals(endRule)) {
+								exit = true;
+								System.out.println("\t\t\tAdmin closed the chat room.\n");
+							}
+							else if (recvText.startsWith("~")) System.out.println(recvText.substring(1));
+							else System.out.println(senderName + ": " + recvText);
 						} catch (Exception e) {
 							System.out.println("Disconnected: Running Thread...");
 							exit = true;
