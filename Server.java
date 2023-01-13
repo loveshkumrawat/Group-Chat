@@ -3,13 +3,24 @@ import java.net.*;
 
 class Server {
 	
-	int delay = 100, memberIter = 0, grpLimit = 10, chatSize = 0;
+	int delay = 100, memberIter = 0, grpLimit = 10, chatSize = 0, active = 0;
 	Socket client[] = new Socket[grpLimit];
 	PrintStream send[] = new PrintStream[grpLimit];
 	BufferedReader recv[] = new BufferedReader[grpLimit];
 	Boolean exit = false;
 	Thread recvThread[] = new Thread[grpLimit], sendThread[] = new Thread[grpLimit];
 	String senderName[] = new String[grpLimit], serverName, recvText[] = new String[grpLimit], consoleTxt, endRule = "exit";
+
+	public void cleanup(int memberIndx) {
+		client[memberIndx] = null;
+		send[memberIndx] = null;
+		recv[memberIndx] = null;
+		recvThread[memberIndx] = null;
+		recvThread[memberIndx] = null;
+		senderName[memberIndx] = endRule;
+		recvText[memberIndx] = null;
+		active--;
+	}
 
 	public void user() throws Exception {
 
@@ -29,9 +40,7 @@ class Server {
 				
 				while (chatSize < grpLimit) {
 					try {
-						// System.out.println("Waiting for " + chatSize);
 						client[chatSize] = server.accept();
-						// System.out.println("Waiting for " + chatSize);
 					
 						// Data exchange Objects
 						send[chatSize] = new PrintStream(client[chatSize].getOutputStream());
@@ -41,10 +50,11 @@ class Server {
 						send[chatSize].println(serverName);
 						senderName[chatSize] = recv[chatSize].readLine();
 						System.out.println("\n\t\t" + senderName[chatSize] + " joined the chat room.\n");
-						// System.out.println("|||||||||" + chatSize);
+						for (int indx=0; indx<chatSize; indx++) if (indx != chatSize)
+							send[indx].println(senderName[chatSize] + " joined the chat room.");
 						chatSize++;
+						active++;
 						exit = true;
-						// System.out.println("|||||||||" + chatSize);
 					} catch (Exception e) { e.printStackTrace(); }			//! Resolve
 				}
 				
@@ -53,17 +63,14 @@ class Server {
 		};
 
 		multiClients.start();
-		// System.out.println("-----------start: " + chatSize);
 		
-		while (!exit || chatSize != 0) {
+		while (!exit || active != 0) {
 			
 			Thread.sleep(delay * 10);
-			// System.out.println("------------------=======" + chatSize + "===" + exit);
 			for (memberIter=0; memberIter<chatSize; memberIter++) {
 
 				// Minimum delay for proper execution
 				Thread.sleep(delay);
-				// System.out.println("------------------=======" + chatSize + "===" + memberIter);
 				
 				// Reciever port
 				if (recvThread[memberIter] == null || !recvThread[memberIter].isAlive()) {
@@ -73,13 +80,12 @@ class Server {
 					recvThread[memberIndx] = new Thread() {
 						public void run() {
 							
-							// System.out.println("-----------recv-");
-							// System.out.println("------------------=======" + chatSize + "===" + memberIter);
 							try {
-								// System.out.println("|" + recv[memberIndx] + "|" + memberIndx + "|");
 								if ((recvText[memberIndx] = recv[memberIndx].readLine()).equals(endRule)) {
 									System.out.println("\n\t\t" + senderName[memberIndx] + " left the chat room.\n");
-									chatSize--;
+									for (int indx=0; indx<chatSize; indx++) if (indx != memberIndx)
+										send[indx].println("\n\t\t" + senderName[memberIndx] + " left the chat room.\n");
+									cleanup(memberIndx);
 								}
 								else {
 									System.out.println(senderName[memberIndx] + ": " + recvText[memberIndx]);
@@ -88,7 +94,7 @@ class Server {
 								}
 							} catch (Exception e) {
 								e.printStackTrace();
-								chatSize--;			//TODO: Data cleanup
+								cleanup(memberIndx);			//TODO: Data cleanup not proper
 							}
 						}
 					};
@@ -99,14 +105,15 @@ class Server {
 				// Sender port
 				if (sendThread[memberIter] == null || !sendThread[memberIter].isAlive()) {
 					
-					sendThread[memberIter] = new Thread() {
+					int memberIndx = memberIter;
+					
+					sendThread[memberIndx] = new Thread() {
 						public void run() {
 							
-							// System.out.println("-----------send-");
-							int memberIndx = memberIter;
 							try {
-								if ((consoleTxt = console.readLine()).equals(endRule)) exit = true;
-								if (!recvText[memberIndx].equals(endRule)) send[memberIndx].println(consoleTxt);
+								if ((consoleTxt = console.readLine()).equals(endRule)) chatSize = 0;
+								if (!recvText[memberIndx].equals(endRule)) for (int indx=0; indx<chatSize; indx++)
+									send[indx].println(consoleTxt);
 							} catch (Exception e) {
 								System.out.println("Disconnected: Running Thread...");
 								exit = true;
@@ -118,23 +125,18 @@ class Server {
 				}
 			}
 		}
-		// System.out.println("------------------=======Out");
 		
 		// Disconnection
 		console.close();
-		// System.out.println("------------------=======Out2");
 		for (int c=0; c < chatSize; c++) {
 			send[c].close();
-			// System.out.println("------------------=======" + chatSize + "===||" + c);
 			recv[c].close();
 			recv[c].close();
 			client[c].close();
 		}
-		// System.out.println("------------------=======Out3");
 		
 		// Server shut-down
 		server.close();
-		// System.out.println("------------------=======Out4");
 	}
 
 	public static void main(String args[]) throws Exception {

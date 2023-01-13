@@ -12,11 +12,12 @@ class Client {
 
 		// Client socket
 		Socket client;
+		String serverHost = System.getenv("SERVER_HOST");
 		
 		System.out.println("Wait session starting...");
 		while (true) {
 			try {
-				client = new Socket("localhost", 3333);
+				client = new Socket((serverHost != null) ? serverHost : "localhost", 3333);
 				break;
 			} catch (Exception e) {}
 		}
@@ -53,6 +54,7 @@ class Client {
 								System.out.println("\t\t\tAdmin closed the chat room.\n");
 							}
 							else if (recvText.startsWith("~")) System.out.println(recvText.substring(1));
+							else if (recvText.endsWith("chat room.")) System.out.println("\n\t\t" + recvText + "\n");
 							else System.out.println(senderName + ": " + recvText);
 						} catch (Exception e) {
 							System.out.println("Disconnected: Running Thread...");
