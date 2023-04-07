@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+
+  Server:
+    image: chat-server
+    build:
+      context: .
+      dockerfile: ./DockerfileServer
+    volumes:
+      - ./Server.java:/app/Server.java
+    stdin_open: true
+    tty: true
+    ports:
+      - 3000:3000
+
+  Client:
+    image: chat-client
+    build:
+      context: .
+      dockerfile: ./DockerfileClient
+    depends_on:
+      - Server
+    environment:
+      - SERVER_HOST=Server
+    volumes:
+      - ./Client.java:/app/Client.java
+    stdin_open: true
+    tty: true
+    ports:
+      - 3001:3001
